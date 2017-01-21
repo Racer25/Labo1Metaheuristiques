@@ -141,6 +141,12 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 	
 }
 
+TSolution permutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo)
+{
+	//TODO
+	return(uneSol);
+}
+
 //DESCRIPTION: Echange de deux commandes sélectionnées aléatoirement
 TSolution Echange (const TSolution uneSol, TProblem unProb, TAlgo &unAlgo)
 {
