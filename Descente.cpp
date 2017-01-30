@@ -125,13 +125,28 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 		{
 			listeVoisins[i] = PermutationAdjacente(uneSol, unProb, unAlgo, 3, 0.2);
 			//Avantageux?
-			if (listeVoisins[i].RetardP<uneSol.RetardP)
+			//Calcul retardPOld
+			int retardPOldTotal = 0;
+			for (int retardpOldCourant : uneSol.RetardP)
+			{
+				retardPOldTotal += retardpOldCourant;
+			}
+			//Calcul retardPNew
+			int retardPNewTotal = 0;
+			for (int retardpNewCourant : listeVoisins[i].RetardP)
+			{
+				retardPNewTotal += retardpNewCourant;
+			}
+			//Comparaison
+			cout << "retardPOldTotal: " << retardPOldTotal << ", retardPNewTotal: " << retardPNewTotal << endl;
+			if (retardPNewTotal<retardPOldTotal)
 			{
 				compteurVoisinsMeilleurs++;
 				listeVoisinsMeilleurs.push_back(listeVoisins[i]);
 			}
 		}
 	//On boucle tant qu'il n'y a pas d'amélioration
+		//cout << "Ca boucle" << endl;
 	} while (compteurVoisinsMeilleurs == 0);
 		
 	//Prélevons au hasard parmis les voisins avantageux
@@ -265,7 +280,7 @@ TSolution PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &u
 			}
 			j++;
 
-			cout << "Boucle2: i= " << i <<", j= " << j << endl;
+			//cout << "Boucle2: i= " << i <<", j= " << j << endl;
 
 		} while (i < limite && j < super_limite); //Validation pour ne pas consommer une évaluation inutilement
 	}
