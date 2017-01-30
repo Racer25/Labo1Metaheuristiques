@@ -49,6 +49,9 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 //DESCRIPTION:	 Echange de deux villes sélectionnée aléatoirement. NB:uneSol ne doit pas être modifiée
 TSolution	Echange			(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo);
 
+//DESCRIPTION:	 Permutations adjacentes de plusieurs commandes sélectionnées aléatoirement parmi celles en retard. NB:uneSol ne doit pas être modifiée
+TSolution	PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo, int limite, float taux_modif);
+
 
 //******************************************************************************************
 // Fonction main
@@ -68,11 +71,11 @@ int main(int NbParam, char *Param[])
 
 	//**Lecture du fichier de donnees
 	LectureProbleme(NomFichier, LeProb, LAlgo);
-	AfficherProbleme(LeProb);
+	//AfficherProbleme(LeProb);
 	
 	//**Création de la solution initiale 
 	CreerSolutionAleatoire(Courante, LeProb, LAlgo);
-	AfficherSolution(Courante, LeProb, "SolInitiale: ", false);
+	AfficherSolution(Courante, LeProb, "SolInitiale: ", true);
 
 	do
 	{
@@ -96,6 +99,9 @@ int main(int NbParam, char *Param[])
 	return 0;
 }
 
+
+
+
 //DESCRIPTION: Création d'une solution voisine à partir de la solution uneSol qui ne doit pas être modifiée.
 //Dans cette fonction, on appel le TYPE DE VOISINAGE sélectionné + on détermine la STRATÉGIE D'ORIENTATION. 
 //Ainsi, si la RÈGLE DE PIVOT nécessite l'étude de plusieurs voisins, la fonction TYPE DE VOISINAGE sera appelée plusieurs fois.
@@ -106,45 +112,10 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 	//Parcours dans le voisinage : À MODIFIER	(Aleatoire)
 	//Règle de pivot : À MODIFIER	(First-Impove)
 
-	//TSolution unVoisin;
-	//unVoisin = Echange(uneSol, unProb, unAlgo);
-	//return (unVoisin);
-
-	////////////////////////////////////////////////////////////////
-	//Etablissons la liste de voisins générés
-	int k = 10;
-	std::vector<TSolution> listeVoisins(k);
-	std::vector<TSolution> listeVoisinsMeilleurs(k);
-	int compteurVoisinsMeilleurs;
-	do 
-	{
-		listeVoisinsMeilleurs.clear();
-		compteurVoisinsMeilleurs = 0;
-		for (int i = 0; i<k; i++)
-		{
-			listeVoisins[i] = Echange(uneSol, unProb, unAlgo);
-			//Avantageux?
-			if (listeVoisins[i].RetardP<uneSol.RetardP)
-			{
-				compteurVoisinsMeilleurs++;
-				listeVoisinsMeilleurs.push_back(listeVoisins[i]);
-			}
-		}
-		//On boucle tant qu'il n'y a pas d'amélioration
-	} while (compteurVoisinsMeilleurs==0);
-
-	//Prélevons au hasard parmis les voisins avantageux
-	int pos = rand() % compteurVoisinsMeilleurs;
+	TSolution unVoisin;
 	
-	return (listeVoisinsMeilleurs[pos]);
-	/////////////////////////////////////////////////////////////////
-	
-}
-
-TSolution permutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo)
-{
-	//TODO
-	return(uneSol);
+	unVoisin = PermutationAdjacente(uneSol, unProb, unAlgo, 3, 0.2);
+	return (unVoisin);	
 }
 
 //DESCRIPTION: Echange de deux commandes sélectionnées aléatoirement
@@ -169,6 +140,112 @@ TSolution Echange (const TSolution uneSol, TProblem unProb, TAlgo &unAlgo)
 	Copie.Seq[PosB] = Tmp;
 	
 	//Le nouveau voisin doit être évalué 
+	EvaluerSolution(Copie, unProb, unAlgo);
+	return(Copie);
+}
+
+//DESCRIPTION: Permutation adjacente de plusieurs commandes sélectionnées aléatoirement parmi celles qui sont en retard
+// Le parametre limite correspond au nombre de modifs min par appel de fonction
+// Le parametre taux_modif correspond au taux de modification desire sur l'ensemble des commandes en retard
+TSolution PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo, int limite, float taux_modif)
+{
+	TSolution Copie;
+	int Pos, PosAvant, PosApres, PosCentre, Tmp;
+	int super_limite = 100; // Nb iteration max, utile si peu de modifications realisables
+
+	//Utilisation d'une nouvelle TSolution pour ne pas modifier La solution courante (uneSol)
+	CopierSolution(uneSol, Copie, unProb);
+
+	size_t i = 0;
+	int j = 0;
+	std::vector<int> commandesEnRetard;
+	
+	// reperage des commandes en retard
+	while (i < unProb.NbCom)
+	{
+		if (Copie.RetardP[i] > 0)
+		{
+			commandesEnRetard.push_back(i);
+		}
+		i++;
+	}
+
+	// calcul de la limite : taux_modif de modification sur les commandes en retard
+	if (((int)(taux_modif*commandesEnRetard.size())) > limite)
+	{
+		limite = (int)(taux_modif*commandesEnRetard.size());
+	}
+
+	if (limite > commandesEnRetard.size()) // cas ou la limite est plus grande que le nombre de commandes en retard
+	{
+		limite = commandesEnRetard.size();
+
+		i = 0;
+		// dans ce cas, on test toutes les commandes en retard
+		while (i<(int)(commandesEnRetard.size()))
+		{
+			PosCentre = commandesEnRetard[i];
+			PosAvant = PosCentre - 1;
+			PosApres = PosCentre + 1;
+
+			// realisation des permutations adjacentes si elles peuvent ameliorer la situation
+			if (PosAvant >= 0 && Copie.RetardP[PosCentre] > Copie.RetardP[PosAvant])
+			{
+				Tmp = Copie.Seq[PosCentre];
+				Copie.Seq[PosCentre] = Copie.Seq[PosAvant];
+				Copie.Seq[PosAvant] = Tmp;
+			}
+			if (PosApres < unProb.NbCom && Copie.RetardP[PosCentre] < Copie.RetardP[PosApres])
+			{
+				Tmp = Copie.Seq[PosCentre];
+				Copie.Seq[PosCentre] = Copie.Seq[PosApres];
+				Copie.Seq[PosApres] = Tmp;
+			}
+			i++;
+		}
+	}
+	else // cas ou la limite specifiee peut-etre utilisable
+	{
+		int passAvant, passApres;
+		boolean pass;
+		i = 0;
+		// on choisi une commande aleatoirement parmi celles qui sont en retard
+		Pos = (int)(rand() % commandesEnRetard.size());
+		do
+		{
+			passAvant = 0;
+			passApres = 0;
+
+			PosCentre = commandesEnRetard[Pos];
+			PosAvant = PosCentre - 1;
+			PosApres = PosCentre + 1;
+
+			// realisation des permutations adjacentes si elles peuvent ameliorer la situation
+			if (PosAvant >= 0 && Copie.RetardP[PosCentre] > Copie.RetardP[PosAvant])
+			{
+				Tmp = Copie.Seq[PosCentre];
+				Copie.Seq[PosCentre] = Copie.Seq[PosAvant];
+				Copie.Seq[PosAvant] = Tmp;
+				passAvant++;
+			}
+			if (PosApres < unProb.NbCom && Copie.RetardP[PosCentre] < Copie.RetardP[PosApres])
+			{
+				Tmp = Copie.Seq[PosCentre];
+				Copie.Seq[PosCentre] = Copie.Seq[PosApres];
+				Copie.Seq[PosApres] = Tmp;
+				passApres++;
+			}
+			// si une (ou deux) permutation est effectuee, on incremente le compteur de modif pour favoriser la sortie de boucle
+			if ((passAvant + passApres) > 0)
+			{
+				i++;
+			}
+			j++;
+
+		} while (i < limite || j < super_limite); //Validation pour ne pas consommer une évaluation inutilement
+	}
+
+	//Les nouveaux voisins doivent être évalués
 	EvaluerSolution(Copie, unProb, unAlgo);
 	return(Copie);
 }
