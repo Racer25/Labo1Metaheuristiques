@@ -112,10 +112,32 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 	//Parcours dans le voisinage : À MODIFIER	(Aleatoire)
 	//Règle de pivot : À MODIFIER	(First-Impove)
 
-	TSolution unVoisin;
-	
-	unVoisin = PermutationAdjacente(uneSol, unProb, unAlgo, 3, 0.2);
-	return (unVoisin);	
+	//Etablissons la liste de voisins générés
+	int k = 10;
+	std::vector<TSolution> listeVoisins(k);
+	std::vector<TSolution> listeVoisinsMeilleurs(k);
+	int compteurVoisinsMeilleurs;
+	do
+	{
+		listeVoisinsMeilleurs.clear();
+		compteurVoisinsMeilleurs = 0;
+		for (int i = 0; i<k; i++)
+		{
+			listeVoisins[i] = PermutationAdjacente(uneSol, unProb, unAlgo, 3, 0.2);
+			//Avantageux?
+			if (listeVoisins[i].RetardP<uneSol.RetardP)
+			{
+				compteurVoisinsMeilleurs++;
+				listeVoisinsMeilleurs.push_back(listeVoisins[i]);
+			}
+		}
+	//On boucle tant qu'il n'y a pas d'amélioration
+	} while (compteurVoisinsMeilleurs == 0);
+		
+	//Prélevons au hasard parmis les voisins avantageux
+	int pos = rand() % compteurVoisinsMeilleurs;
+		
+	return (listeVoisinsMeilleurs[pos]);
 }
 
 //DESCRIPTION: Echange de deux commandes sélectionnées aléatoirement
