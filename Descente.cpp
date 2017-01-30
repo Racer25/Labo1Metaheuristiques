@@ -206,6 +206,7 @@ TSolution PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &u
 		// dans ce cas, on test toutes les commandes en retard
 		while (i<(int)(commandesEnRetard.size()))
 		{
+			cout << "Boucle1" << endl;
 			PosCentre = commandesEnRetard[i];
 			PosAvant = PosCentre - 1;
 			PosApres = PosCentre + 1;
@@ -264,7 +265,9 @@ TSolution PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &u
 			}
 			j++;
 
-		} while (i < limite || j < super_limite); //Validation pour ne pas consommer une évaluation inutilement
+			cout << "Boucle2: i= " << i <<", j= " << j << endl;
+
+		} while (i < limite && j < super_limite); //Validation pour ne pas consommer une évaluation inutilement
 	}
 
 	//Les nouveaux voisins doivent être évalués
