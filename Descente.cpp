@@ -49,6 +49,9 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 //DESCRIPTION:	 Echange de deux villes sélectionnée aléatoirement. NB:uneSol ne doit pas être modifiée
 TSolution	Echange			(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo);
 
+//DESCRIPTION:	 Echange de deux villes sélectionnée aléatoirement si cela est favorable. NB:uneSol ne doit pas être modifiée
+TSolution	EchangeOriente(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo);
+
 //DESCRIPTION:	 Permutations adjacentes de plusieurs commandes sélectionnées aléatoirement parmi celles en retard. NB:uneSol ne doit pas être modifiée
 TSolution	PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &unAlgo, int limite, float taux_modif);
 
@@ -113,7 +116,9 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 	//Règle de pivot : À MODIFIER	(First-Impove)
 
 	//Etablissons la liste de voisins générés
-	int k = 10;
+	int k = 10;//nombre de voisins générés
+	int limiteIteration = 50;
+	int iteration = 0;
 	std::vector<TSolution> listeVoisins(k);
 	std::vector<TSolution> listeVoisinsMeilleurs(k);
 	int compteurVoisinsMeilleurs;
@@ -123,7 +128,9 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 		compteurVoisinsMeilleurs = 0;
 		for (int i = 0; i<k; i++)
 		{
-			listeVoisins[i] = PermutationAdjacente(uneSol, unProb, unAlgo, 3, 0.2);
+			//listeVoisins[i] = PermutationAdjacente(uneSol, unProb, unAlgo, 3, 0.2);
+			//listeVoisins[i] = Echange(uneSol, unProb, unAlgo);
+			listeVoisins[i] = EchangeOriente(uneSol, unProb, unAlgo);
 			//Avantageux?
 			//Calcul retardPOld
 			int retardPOldTotal = 0;
@@ -138,21 +145,29 @@ TSolution GetSolutionVoisine (const TSolution uneSol, TProblem unProb, TAlgo &un
 				retardPNewTotal += retardpNewCourant;
 			}
 			//Comparaison
-			cout << "retardPOldTotal: " << retardPOldTotal << ", retardPNewTotal: " << retardPNewTotal << endl;
+			//cout << "retardPOldTotal: " << retardPOldTotal << ", retardPNewTotal: " << retardPNewTotal << endl;
 			if (retardPNewTotal<retardPOldTotal)
 			{
 				compteurVoisinsMeilleurs++;
 				listeVoisinsMeilleurs.push_back(listeVoisins[i]);
 			}
 		}
+		iteration++;
 	//On boucle tant qu'il n'y a pas d'amélioration
-		//cout << "Ca boucle" << endl;
-	} while (compteurVoisinsMeilleurs == 0);
+	} while (compteurVoisinsMeilleurs == 0 && iteration<limiteIteration);
 		
 	//Prélevons au hasard parmis les voisins avantageux
-	int pos = rand() % compteurVoisinsMeilleurs;
-		
-	return (listeVoisinsMeilleurs[pos]);
+	int pos;
+	if (compteurVoisinsMeilleurs != 0)
+	{
+		pos= rand() % compteurVoisinsMeilleurs;
+		return (listeVoisinsMeilleurs[pos]);
+	}
+	else
+	{
+		pos = rand() % k;
+		return (listeVoisins[pos]);
+	}
 }
 
 //DESCRIPTION: Echange de deux commandes sélectionnées aléatoirement
@@ -181,6 +196,44 @@ TSolution Echange (const TSolution uneSol, TProblem unProb, TAlgo &unAlgo)
 	return(Copie);
 }
 
+//DESCRIPTION: Echange de deux commandes sélectionnées aléatoirement si cela favorise la situation
+TSolution EchangeOriente (const TSolution uneSol, TProblem unProb, TAlgo &unAlgo)
+{
+	TSolution Copie;
+	int PosA, PosB, Tmp;
+
+	//Utilisation d'une nouvelle TSolution pour ne pas modifier La solution courante (uneSol)
+	CopierSolution(uneSol, Copie, unProb);
+
+	//Tirage aléatoire des 2 commandes
+	boolean nochange = true;
+	do
+	{
+		PosA = rand() % unProb.NbCom;
+		do
+		{
+			PosB = rand() % unProb.NbCom;
+		} while (PosA == PosB); //Validation pour ne pas consommer une évaluation inutilement
+
+								//Echange des 2 commandes sous conditions
+		if ((Copie.RetardP[PosA] > Copie.RetardP[PosB] && PosA > PosB) ||
+			(Copie.RetardP[PosA] < Copie.RetardP[PosB] && PosA < PosB))
+		{
+			Tmp = Copie.Seq[PosA];
+			Copie.Seq[PosA] = Copie.Seq[PosB];
+			Copie.Seq[PosB] = Tmp;
+			nochange = false;
+		}
+		//Tant qu'il n'y a pas de changement
+	} while (nochange);
+	
+	
+
+	//Le nouveau voisin doit être évalué 
+	EvaluerSolution(Copie, unProb, unAlgo);
+	return(Copie);
+}
+
 //DESCRIPTION: Permutation adjacente de plusieurs commandes sélectionnées aléatoirement parmi celles qui sont en retard
 // Le parametre limite correspond au nombre de modifs min par appel de fonction
 // Le parametre taux_modif correspond au taux de modification desire sur l'ensemble des commandes en retard
@@ -188,7 +241,7 @@ TSolution PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &u
 {
 	TSolution Copie;
 	int Pos, PosAvant, PosApres, PosCentre, Tmp;
-	int super_limite = 100; // Nb iteration max, utile si peu de modifications realisables
+	int super_limite = 10; // Nb iteration max, utile si peu de modifications realisables
 
 	//Utilisation d'une nouvelle TSolution pour ne pas modifier La solution courante (uneSol)
 	CopierSolution(uneSol, Copie, unProb);
@@ -289,3 +342,4 @@ TSolution PermutationAdjacente(const TSolution uneSol, TProblem unProb, TAlgo &u
 	EvaluerSolution(Copie, unProb, unAlgo);
 	return(Copie);
 }
+
